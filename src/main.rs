@@ -1,14 +1,36 @@
-use axum::{Router, routing::get};
-use tokio::net::TcpListener;
-
 mod config;
+mod db;
+
+use axum::{Router, routing::get};
+use dotenvy::dotenv;
+use tokio::net::TcpListener;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const PORT: u16 = 3000;
 const HOST: &str = "0.0.0.0";
 
 #[tokio::main]
 async fn main() {
-    let router: Router = Router::new().route("/", get(|| async { "Hello world" }));
+    dotenv().ok();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "taskflow_api=info,tower_http=debug,axum=trace".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+    tracing::info!("Initialize taskflow api");
+
+    let db = db::pool::create_pool()
+        .await
+        .expect("error connect database");
+
+    tracing::info!("Database connected");
+
+    let router: Router = Router::new()
+        .route("/", get(|| async { "Hello world" }))
+        .with_state(db);
 
     let addr: String = format!("{}:{}", HOST, PORT);
 
