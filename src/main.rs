@@ -1,5 +1,6 @@
 mod config;
 mod db;
+mod models;
 
 use axum::{Router, routing::get};
 use dotenvy::dotenv;
